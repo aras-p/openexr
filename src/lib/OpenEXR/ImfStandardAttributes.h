@@ -30,6 +30,7 @@
 #include "ImfEnvmapAttribute.h"
 #include "ImfDeepImageStateAttribute.h"
 #include "ImfFloatAttribute.h"
+#include "ImfIntAttribute.h"
 #include "ImfKeyCodeAttribute.h"
 #include "ImfMatrixAttribute.h"
 #include "ImfRationalAttribute.h"
