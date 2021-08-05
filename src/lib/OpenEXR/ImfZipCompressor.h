@@ -49,6 +49,7 @@ class ZipCompressor: public Compressor
     int		_numScanLines;
     char *	_outBuffer;
     Zip     _zip;
+    int     _cmpLevel;
 };
 
 

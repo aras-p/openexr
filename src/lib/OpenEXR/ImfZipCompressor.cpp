@@ -15,6 +15,7 @@
 #include "Iex.h"
 #include <zlib.h>
 #include "ImfNamespace.h"
+#include "ImfStandardAttributes.h"
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
@@ -28,11 +29,18 @@ ZipCompressor::ZipCompressor
     _maxScanLineSize (maxScanLineSize),
     _numScanLines (numScanLines),
     _outBuffer (0),
-    _zip(maxScanLineSize, numScanLines)
+    _zip(maxScanLineSize, numScanLines),
+    _cmpLevel(4)
 {
     // TODO: Remove this when we can change the ABI
     (void) _maxScanLineSize;
     _outBuffer = new char[_zip.maxCompressedSize ()];
+    if (hasZipCompressionLevel (hdr))
+    {
+        _cmpLevel = zipCompressionLevel (hdr);
+        if (_cmpLevel > 9) _cmpLevel = 9;
+        if (_cmpLevel < 1) _cmpLevel = 1;
+    }
 }
 
 
@@ -65,7 +73,7 @@ ZipCompressor::compress (const char *inPtr,
 	return 0;
     }
 
-    int outSize = _zip.compress(inPtr, inSize, _outBuffer);
+    int outSize = _zip.compress(inPtr, inSize, _outBuffer, _cmpLevel);
 
     outPtr = _outBuffer;
     return outSize;

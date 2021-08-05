@@ -185,6 +185,11 @@ By default, OpenEXR files have the following attributes:
   Sets the quality level for images compressed with the DWAA or DWAB
   method.
 
+**zipCompressionLevel**
+  Sets the compression level (1-9) for images compressed with the ZIP
+  or ZIPS method. Affects compression ratio and compression performance.
+  Default is level 4.
+
 **ID Manifest**
   ID manifest.
 

@@ -2247,7 +2247,7 @@ DwaCompressor::compress
         *dcCompressedSize = _zip->compress
             (_packedDcBuffer,
              (int)(*totalDcUncompressedCount) * sizeof (unsigned short),
-             outDataPtr);
+             outDataPtr, Z_DEFAULT_COMPRESSION);
 
         outDataPtr += *dcCompressedSize;
     }

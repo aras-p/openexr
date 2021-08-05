@@ -32,7 +32,7 @@ class Zip
         // Compress the raw data into the provided buffer.
         // Returns the amount of compressed data.
         //
-        int compress(const char *raw, int rawSize, char *compressed);
+        int compress(const char *raw, int rawSize, char *compressed, int level);
 
         // 
         // Uncompress the compressed data into the provided
