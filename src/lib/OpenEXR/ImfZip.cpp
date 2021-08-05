@@ -98,8 +98,8 @@ Zip::compress(const char *raw, int rawSize, char *compressed)
 
     uLongf outSize = int(ceil(rawSize * 1.01)) + 100;
 
-    if (Z_OK != ::compress ((Bytef *)compressed, &outSize,
-                (const Bytef *) _tmpBuffer, rawSize))
+    if (Z_OK != ::compress2 ((Bytef *)compressed, &outSize,
+                (const Bytef *) _tmpBuffer, rawSize, 4))
     {
         throw IEX_NAMESPACE::BaseExc ("Data compression (zlib) failed.");
     }

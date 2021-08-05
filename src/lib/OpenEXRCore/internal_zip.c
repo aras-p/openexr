@@ -248,11 +248,11 @@ apply_zip_impl (exr_encode_pipeline_t* encode)
         ++t1;
     }
 
-    if (Z_OK != compress (
+    if (Z_OK != compress2 (
                     (Bytef*) encode->compressed_buffer,
                     &compbufsz,
                     (const Bytef*) encode->scratch_buffer_1,
-                    encode->packed_bytes))
+                    encode->packed_bytes, 4))
     {
         return EXR_ERR_CORRUPT_CHUNK;
     }
