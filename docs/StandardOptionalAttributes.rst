@@ -188,7 +188,9 @@ By default, OpenEXR files have the following attributes:
 **zipCompressionLevel**
   Sets the compression level (1-9) for images compressed with the ZIP
   or ZIPS method. Affects compression ratio and compression performance.
-  Default is level 4.
+  Default is level 4. Note that the attribute was added in OpenEXR
+  library version 3.2; in earlier versions the compression level was
+  always 6.
 
 **ID Manifest**
   ID manifest.
