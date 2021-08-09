@@ -46,6 +46,10 @@ class Zip
         char  *_tmpBuffer;
 };
 
+void FilterBeforeCompression(const char* raw, size_t rawSize, char* outBuffer);
+void UnfilterAfterDecompression(char* tmpBuffer, size_t size, char* outBuffer);
+
+
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

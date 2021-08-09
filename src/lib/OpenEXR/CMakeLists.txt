@@ -98,6 +98,42 @@ openexr_define_library(OpenEXR
     ImfWav.cpp
     ImfZip.cpp
     ImfZipCompressor.cpp
+    ImfZstdCompressor.cpp
+    libdeflate/lib/adler32.c
+    libdeflate/lib/crc32.c
+    libdeflate/lib/deflate_compress.c
+    libdeflate/lib/deflate_decompress.c
+    libdeflate/lib/gzip_compress.c
+    libdeflate/lib/gzip_decompress.c
+    libdeflate/lib/utils.c
+    libdeflate/lib/x86/cpu_features.c
+    libdeflate/lib/zlib_compress.c
+    libdeflate/lib/zlib_decompress.c
+    zstd/common/debug.c
+    zstd/common/entropy_common.c
+    zstd/common/error_private.c
+    zstd/common/fse_decompress.c
+    zstd/common/pool.c
+    zstd/common/threading.c
+    zstd/common/xxhash.c
+    zstd/common/zstd_common.c
+    zstd/compress/fse_compress.c
+    zstd/compress/hist.c
+    zstd/compress/huf_compress.c
+    zstd/compress/zstd_compress_literals.c
+    zstd/compress/zstd_compress_sequences.c
+    zstd/compress/zstd_compress_superblock.c
+    zstd/compress/zstd_compress.c
+    zstd/compress/zstd_double_fast.c
+    zstd/compress/zstd_fast.c
+    zstd/compress/zstd_lazy.c
+    zstd/compress/zstd_ldm.c
+    zstd/compress/zstd_opt.c
+    zstd/compress/zstdmt_compress.c
+    zstd/decompress/huf_decompress.c
+    zstd/decompress/zstd_ddict.c
+    zstd/decompress/zstd_decompress_block.c
+    zstd/decompress/zstd_decompress.c
   HEADERS
     ImfAcesFile.h
     ImfArray.h

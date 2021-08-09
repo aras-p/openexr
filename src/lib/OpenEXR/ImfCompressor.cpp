@@ -13,6 +13,7 @@
 #include "ImfCompressor.h"
 #include "ImfRleCompressor.h"
 #include "ImfZipCompressor.h"
+#include "ImfZstdCompressor.h"
 #include "ImfPizCompressor.h"
 #include "ImfPxr24Compressor.h"
 #include "ImfB44Compressor.h"
@@ -73,6 +74,8 @@ isValidCompression (Compression c)
       case B44A_COMPRESSION:
       case DWAA_COMPRESSION:
       case DWAB_COMPRESSION:
+      case ZSTD_COMPRESSION:
+      case ZFP_COMPRESSION:
 
 	return true;
 
@@ -153,6 +156,8 @@ newCompressor (Compression c, size_t maxScanLineSize, const Header &hdr)
 	return new DwaCompressor (hdr, static_cast<int>(maxScanLineSize), 256, 
                                DwaCompressor::STATIC_HUFFMAN);
 
+      case ZSTD_COMPRESSION: return new ZstdCompressor (hdr, maxScanLineSize, 16);
+    
       default:
 
 	return 0;
@@ -173,6 +178,8 @@ numLinesInBuffer(Compression comp)
         case ZIPS_COMPRESSION:
             return 1;
         case ZIP_COMPRESSION:
+        case ZSTD_COMPRESSION:
+        case ZFP_COMPRESSION:
             return 16;
         case PIZ_COMPRESSION:
             return 32;

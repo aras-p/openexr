@@ -65,7 +65,10 @@ CompressionAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is
       tmp != B44_COMPRESSION &&
       tmp != B44A_COMPRESSION &&
       tmp != DWAA_COMPRESSION &&
-      tmp != DWAB_COMPRESSION)
+      tmp != DWAB_COMPRESSION &&
+      tmp != ZSTD_COMPRESSION &&
+      tmp != ZFP_COMPRESSION
+      )
     {
         tmp = NUM_COMPRESSION_METHODS;
     }

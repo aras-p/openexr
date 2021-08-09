@@ -10,7 +10,13 @@
 #include "Iex.h"
 
 #include <math.h>
+
+#define USE_LIBDEFLATE_COMPRESS
+#define USE_LIBDEFLATE_DECOMPRESS
+
+
 #include <zlib.h>
+#include "libdeflate/libdeflate.h"
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
@@ -48,16 +54,14 @@ Zip::maxCompressedSize()
                   size_t (100));
 }
 
-int
-Zip::compress(const char *raw, int rawSize, char *compressed, int level)
+void FilterBeforeCompression(const char* raw, size_t rawSize, char* outBuffer)
 {
     //
     // Reorder the pixel data.
     //
-
     {
-        char *t1 = _tmpBuffer;
-        char *t2 = _tmpBuffer + (rawSize + 1) / 2;
+        char *t1 = outBuffer;
+        char *t2 = outBuffer + (rawSize + 1) / 2;
         const char *stop = raw + rawSize;
 
         while (true)
@@ -76,11 +80,10 @@ Zip::compress(const char *raw, int rawSize, char *compressed, int level)
 
     //
     // Predictor.
-    //
-
+    //    
     {
-        unsigned char *t    = (unsigned char *) _tmpBuffer + 1;
-        unsigned char *stop = (unsigned char *) _tmpBuffer + rawSize;
+        unsigned char *t    = (unsigned char *) outBuffer + 1;
+        unsigned char *stop = (unsigned char *) outBuffer + rawSize;
         int p = t[-1];
 
         while (t < stop)
@@ -90,7 +93,13 @@ Zip::compress(const char *raw, int rawSize, char *compressed, int level)
             t[0] = d;
             ++t;
         }
-    }
+    }    
+}
+
+int
+Zip::compress(const char *raw, int rawSize, char *compressed, int level)
+{
+    FilterBeforeCompression(raw, rawSize, _tmpBuffer);
 
     //
     // Compress the data using zlib
@@ -98,11 +107,22 @@ Zip::compress(const char *raw, int rawSize, char *compressed, int level)
 
     uLongf outSize = int(ceil(rawSize * 1.01)) + 100;
 
+    #ifdef USE_LIBDEFLATE_COMPRESS
+    libdeflate_compressor* cmp = libdeflate_alloc_compressor(level);
+    size_t cmpBytes = libdeflate_zlib_compress(cmp, _tmpBuffer, rawSize, compressed, outSize);
+    if (cmpBytes == 0)
+    {
+        throw IEX_NAMESPACE::BaseExc ("Data compression (libdeflate) failed.");
+    }
+    outSize = cmpBytes;
+    libdeflate_free_compressor(cmp);
+    #else
     if (Z_OK != ::compress2 ((Bytef *)compressed, &outSize,
                 (const Bytef *) _tmpBuffer, rawSize, level))
     {
         throw IEX_NAMESPACE::BaseExc ("Data compression (zlib) failed.");
     }
+    #endif
 
     return outSize;
 }
@@ -231,6 +251,28 @@ interleave_scalar(const char *source, size_t outSize, char *out)
 
 #endif
 
+void UnfilterAfterDecompression(char* tmpBuffer, size_t size, char* outBuffer)
+{
+    //
+    // Predictor.
+    //
+#ifdef IMF_HAVE_SSE4_1
+    reconstruct_sse41(tmpBuffer, size);
+#else
+    reconstruct_scalar(tmpBuffer, size);
+#endif
+
+    //
+    // Reorder the pixel data.
+    //
+#ifdef IMF_HAVE_SSE2
+    interleave_sse2(tmpBuffer, size, outBuffer);
+#else
+    interleave_scalar(tmpBuffer, size, outBuffer);
+#endif    
+}
+
+
 int
 Zip::uncompress(const char *compressed, int compressedSize,
                 char *raw)
@@ -241,35 +283,30 @@ Zip::uncompress(const char *compressed, int compressedSize,
 
     uLongf outSize = _maxRawSize;
 
+#ifdef USE_LIBDEFLATE_DECOMPRESS
+    libdeflate_decompressor* cmp = libdeflate_alloc_decompressor();
+    size_t cmpBytes = 0;
+    libdeflate_result cmpRes = libdeflate_zlib_decompress(cmp, compressed, compressedSize, _tmpBuffer, _maxRawSize, &cmpBytes);
+    if (cmpRes != LIBDEFLATE_SUCCESS)
+    {
+        throw IEX_NAMESPACE::InputExc ("Data decompression (libdeflate) failed.");
+    }
+    outSize = cmpBytes;
+    libdeflate_free_decompressor(cmp);
+#else
     if (Z_OK != ::uncompress ((Bytef *)_tmpBuffer, &outSize,
                      (const Bytef *) compressed, compressedSize))
     {
         throw IEX_NAMESPACE::InputExc ("Data decompression (zlib) failed.");
     }
+#endif
 
     if (outSize == 0)
     {
         return outSize;
     }
-
-    //
-    // Predictor.
-    //
-#ifdef IMF_HAVE_SSE4_1
-    reconstruct_sse41(_tmpBuffer, outSize);
-#else
-    reconstruct_scalar(_tmpBuffer, outSize);
-#endif
-
-    //
-    // Reorder the pixel data.
-    //
-#ifdef IMF_HAVE_SSE2
-    interleave_sse2(_tmpBuffer, outSize, raw);
-#else
-    interleave_scalar(_tmpBuffer, outSize, raw);
-#endif
-
+    
+    UnfilterAfterDecompression(_tmpBuffer, outSize, raw);
     return outSize;
 }
 
