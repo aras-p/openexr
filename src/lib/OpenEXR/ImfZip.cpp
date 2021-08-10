@@ -11,8 +11,8 @@
 
 #include <math.h>
 
-#define USE_LIBDEFLATE_COMPRESS
-#define USE_LIBDEFLATE_DECOMPRESS
+//#define USE_LIBDEFLATE_COMPRESS
+//#define USE_LIBDEFLATE_DECOMPRESS
 
 
 #include <zlib.h>
@@ -56,44 +56,37 @@ Zip::maxCompressedSize()
 
 void FilterBeforeCompression(const char* raw, size_t rawSize, char* outBuffer)
 {
-    //
-    // Reorder the pixel data.
-    //
+    // De-interleave the data and do a delta predictor
+    unsigned char *t1 = (unsigned char *) outBuffer;
+    unsigned char *t2 = (unsigned char *) outBuffer + (rawSize + 1) / 2;
+    const unsigned char *r = (const unsigned char *) raw;
+    const unsigned char *stop = r + rawSize;
+    
+    int p1 = 128;
+    int p2 = r[(rawSize - 1)&~1];
+    
+    while (true)
     {
-        char *t1 = outBuffer;
-        char *t2 = outBuffer + (rawSize + 1) / 2;
-        const char *stop = raw + rawSize;
-
-        while (true)
+        if (r < stop)
         {
-            if (raw < stop)
-            *(t1++) = *(raw++);
-            else
+            int v = int(*(r++));
+            int d = v - p1 + (128 + 256);
+            p1 = v;
+            *(t1++) = d;
+        }
+        else
             break;
 
-            if (raw < stop)
-            *(t2++) = *(raw++);
-            else
-            break;
+        if (r < stop)
+        {
+            int v = int(*(r++));
+            int d = v - p2 + (128 + 256);
+            p2 = v;
+            *(t2++) = d;
         }
+        else
+            break;
     }
-
-    //
-    // Predictor.
-    //    
-    {
-        unsigned char *t    = (unsigned char *) outBuffer + 1;
-        unsigned char *stop = (unsigned char *) outBuffer + rawSize;
-        int p = t[-1];
-
-        while (t < stop)
-        {
-            int d = int (t[0]) - p + (128 + 256);
-            p = t[0];
-            t[0] = d;
-            ++t;
-        }
-    }    
 }
 
 int
