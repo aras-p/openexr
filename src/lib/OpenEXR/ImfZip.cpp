@@ -56,6 +56,7 @@ Zip::maxCompressedSize()
 
 void FilterBeforeCompression(const char* raw, size_t rawSize, char* outBuffer)
 {
+#if 1
     // De-interleave the data and do a delta predictor
     unsigned char *t1 = (unsigned char *) outBuffer;
     unsigned char *t2 = (unsigned char *) outBuffer + (rawSize + 1) / 2;
@@ -87,6 +88,46 @@ void FilterBeforeCompression(const char* raw, size_t rawSize, char* outBuffer)
         else
             break;
     }
+#else
+    //
+    // Reorder the pixel data.
+    //
+    {
+        char *t1 = outBuffer;
+        char *t2 = outBuffer + (rawSize + 1) / 2;
+        const char *stop = raw + rawSize;
+
+        while (true)
+        {
+            if (raw < stop)
+            *(t1++) = *(raw++);
+            else
+            break;
+
+            if (raw < stop)
+            *(t2++) = *(raw++);
+            else
+            break;
+        }
+    }
+
+    //
+    // Predictor.
+    //
+    {
+        unsigned char *t    = (unsigned char *) outBuffer + 1;
+        unsigned char *stop = (unsigned char *) outBuffer + rawSize;
+        int p = t[-1];
+
+        while (t < stop)
+        {
+            int d = int (t[0]) - p + (128 + 256);
+            p = t[0];
+            t[0] = d;
+            ++t;
+        }
+    }
+#endif
 }
 
 int
