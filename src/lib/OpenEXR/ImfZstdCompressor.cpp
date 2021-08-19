@@ -16,14 +16,29 @@
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
-//#define USE_W_PREDICTOR 1 // otherwise ClampedGrad
-//#define USE_STREAM_PER_BYTE 1
+//#define USE_EXISTING_EXR_FILTER 1
+//#define USE_N_PREDICTOR 1
+//#define USE_W_PREDICTOR 1
+//#define USE_16BIT_FILTER 1
 
 static int
 Predict (
-    const unsigned char* src, size_t idx, size_t colStride, size_t rowStride)
+    #if USE_16BIT_FILTER
+    const unsigned short* src,
+    #else
+    const unsigned char* src,
+    #endif
+    size_t idx, size_t rowStride)
 {
-    #if USE_W_PREDICTOR
+#if USE_16BIT_FILTER
+    size_t colStride = 1;
+#else
+    size_t colStride = 2;
+#endif
+    #if USE_N_PREDICTOR
+    if (idx < rowStride) return 0;
+    return src[idx - rowStride];
+    #elif USE_W_PREDICTOR
     if (idx < colStride) return 0;
     return src[idx - colStride];
     #else
@@ -34,7 +49,7 @@ Predict (
 
     if (idx < colStride) return 0;
     size_t idxN  = idx - (idx >= rowStride ? rowStride : colStride);
-    size_t idxW = idx - (idx >= colStride ? colStride : colStride);
+    size_t idxW  = idx - colStride;
     size_t idxNW = idx - (idx >= rowStride + colStride ? rowStride + colStride
                                                        : colStride);
     int    vN    = src[idxN];
@@ -45,7 +60,11 @@ Predict (
     int    hi    = std::max (vN, vW);
     if (grad < lo) grad = lo;
     if (grad > hi) grad = hi;
-    assert (grad >= 0 && grad <= 255);
+    #if USE_16BIT_FILTER
+    assert (grad >= 0 && grad <= 0xFFFF);
+    #else
+    assert (grad >= 0 && grad <= 0xFF);
+    #endif
     return grad;
     #endif
 }
@@ -54,36 +73,36 @@ static void
 MyFilterBeforeCompression (
     const unsigned char* raw,
     size_t               size,
-    size_t               colStride,
     size_t               rowStride,
     unsigned char*       outBuffer)
 {
-    #if 0
-    FilterBeforeCompression(raw, size, outBuffer);
-    #elif USE_STREAM_PER_BYTE
-    assert ((size % colStride) == 0);
-    size_t streamSize = size / colStride;
-    size_t idx        = 0;
-    for (size_t i = 0; i < streamSize; ++i) {
-        for (size_t c = 0; c < colStride; ++c) {
-            int v            = raw[idx];
-            int p            = Predict (raw, idx, colStride, rowStride);
-            outBuffer[c * streamSize + i] = v - p;
-            ++idx;
-        }
+#if USE_EXISTING_EXR_FILTER
+    FilterBeforeCompression((const char*)raw, size, (char*)outBuffer);
+    #elif USE_16BIT_FILTER
+    assert ((size % 2) == 0);
+    const unsigned short* raw2 = (const unsigned short*) raw;
+    size_t halfSize = size / 2;
+    size_t i = 0;
+    while (i < halfSize)
+    {
+        int v            = raw2[i];
+        int p            = Predict (raw2, i, rowStride/2);
+        unsigned short nv = v - p;
+        outBuffer[i] = nv & 0xFF;
+        outBuffer[i + halfSize] = nv >> 8;
+        ++i;
     }
     #else
-    assert ((size % 2) == 0);
     size_t halfSize = size / 2;
     size_t i        = 0;
     while (i < size)
     {
         int v            = raw[i];
-        int p            = Predict (raw, i, colStride, rowStride);
+        int p            = Predict (raw, i, rowStride);
         outBuffer[i / 2] = v - p;
         ++i;
-        v                = raw[i];
-        p                = Predict (raw, i, colStride, rowStride);
+        v                           = raw[i];
+        p                           = Predict (raw, i, rowStride);
         outBuffer[i / 2 + halfSize] = v - p;
         ++i;
     }
@@ -94,41 +113,39 @@ static void
 MyUnfilterAfterDecompression (
     unsigned char* src,
     size_t         size,
-    size_t         colStride,
     size_t         rowStride,
     unsigned char* outBuffer)
 {
-    #if 0
-    UnfilterAfterDecompression(tmpBuffer, size, outBuffer);
-#elif USE_STREAM_PER_BYTE
-    assert ((size % colStride) == 0);
-    size_t streamSize = size / colStride;
-    size_t idx        = 0;
-    for (size_t i = 0; i < streamSize; ++i)
-    {
-        for (size_t c = 0; c < colStride; ++c)
-        {
-            int p = Predict (outBuffer, idx, colStride, rowStride);
-            int v = src[c * streamSize + i] + p;
-            outBuffer[idx] = v;
-            ++idx;
-        }
-    }
-    #else
+#if USE_EXISTING_EXR_FILTER
+    UnfilterAfterDecompression ((char*)src, size, (char*)outBuffer);
+#elif USE_16BIT_FILTER
     assert ((size % 2) == 0);
+    unsigned short* outBuffer2 = (unsigned short*)outBuffer;
     size_t halfSize = size / 2;
     size_t i        = 0;
-    while (i < size) {
-        int p        = Predict (outBuffer, i, colStride, rowStride);
+    while (i < halfSize)
+    {
+        unsigned short nv       = src[i] | (src[i + halfSize] << 8);
+        int p        = Predict (outBuffer2, i, rowStride/2);
+        int v        = nv + p;
+        outBuffer2[i] = v;
+        ++i;
+    }
+#else
+    size_t halfSize = size / 2;
+    size_t i        = 0;
+    while (i < size)
+    {
+        int p        = Predict (outBuffer, i, rowStride);
         int v        = src[i / 2] + p;
         outBuffer[i] = v;
         ++i;
-        p            = Predict (outBuffer, i, colStride, rowStride);
+        p            = Predict (outBuffer, i, rowStride);
         v            = src[i / 2 + halfSize] + p;
         outBuffer[i] = v;
         ++i;
     }
-    #endif
+#endif
 }
 
 
@@ -185,7 +202,7 @@ ZstdCompressor::compress (const char *inPtr,
         return 0;
     }
     
-    MyFilterBeforeCompression ((const unsigned char*)inPtr, inSize, 8, _rowStride, (unsigned char*)_tmpBuffer);
+    MyFilterBeforeCompression ((const unsigned char*)inPtr, inSize, _rowStride, (unsigned char*)_tmpBuffer);
     
     size_t cmpSize = ZSTD_compress(_outBuffer, _outBufferCapacity, _tmpBuffer, inSize, _cmpLevel);
     
@@ -211,7 +228,7 @@ ZstdCompressor::uncompress (const char *inPtr,
     if (resSize == 0)
         return 0;
     
-    MyUnfilterAfterDecompression((unsigned char*)_tmpBuffer, resSize, 8, _rowStride, (unsigned char*)_outBuffer);
+    MyUnfilterAfterDecompression((unsigned char*)_tmpBuffer, resSize, _rowStride, (unsigned char*)_outBuffer);
 
     outPtr = _outBuffer;
     return (int)resSize;
