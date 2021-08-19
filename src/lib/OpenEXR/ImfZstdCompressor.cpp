@@ -16,25 +16,16 @@
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
-//#define USE_EXISTING_EXR_FILTER 1
+#define USE_EXISTING_EXR_FILTER 1
 //#define USE_N_PREDICTOR 1
 //#define USE_W_PREDICTOR 1
-//#define USE_16BIT_FILTER 1
 
 static int
 Predict (
-    #if USE_16BIT_FILTER
-    const unsigned short* src,
-    #else
     const unsigned char* src,
-    #endif
     size_t idx, size_t rowStride)
 {
-#if USE_16BIT_FILTER
-    size_t colStride = 1;
-#else
     size_t colStride = 2;
-#endif
     #if USE_N_PREDICTOR
     if (idx < rowStride) return 0;
     return src[idx - rowStride];
@@ -60,11 +51,7 @@ Predict (
     int    hi    = std::max (vN, vW);
     if (grad < lo) grad = lo;
     if (grad > hi) grad = hi;
-    #if USE_16BIT_FILTER
-    assert (grad >= 0 && grad <= 0xFFFF);
-    #else
     assert (grad >= 0 && grad <= 0xFF);
-    #endif
     return grad;
     #endif
 }
@@ -78,21 +65,7 @@ MyFilterBeforeCompression (
 {
 #if USE_EXISTING_EXR_FILTER
     FilterBeforeCompression((const char*)raw, size, (char*)outBuffer);
-    #elif USE_16BIT_FILTER
-    assert ((size % 2) == 0);
-    const unsigned short* raw2 = (const unsigned short*) raw;
-    size_t halfSize = size / 2;
-    size_t i = 0;
-    while (i < halfSize)
-    {
-        int v            = raw2[i];
-        int p            = Predict (raw2, i, rowStride/2);
-        unsigned short nv = v - p;
-        outBuffer[i] = nv & 0xFF;
-        outBuffer[i + halfSize] = nv >> 8;
-        ++i;
-    }
-    #else
+#else
     size_t halfSize = size / 2;
     size_t i        = 0;
     while (i < size)
@@ -106,7 +79,7 @@ MyFilterBeforeCompression (
         outBuffer[i / 2 + halfSize] = v - p;
         ++i;
     }
-    #endif
+#endif
 }
 
 static void
@@ -118,19 +91,6 @@ MyUnfilterAfterDecompression (
 {
 #if USE_EXISTING_EXR_FILTER
     UnfilterAfterDecompression ((char*)src, size, (char*)outBuffer);
-#elif USE_16BIT_FILTER
-    assert ((size % 2) == 0);
-    unsigned short* outBuffer2 = (unsigned short*)outBuffer;
-    size_t halfSize = size / 2;
-    size_t i        = 0;
-    while (i < halfSize)
-    {
-        unsigned short nv       = src[i] | (src[i + halfSize] << 8);
-        int p        = Predict (outBuffer2, i, rowStride/2);
-        int v        = nv + p;
-        outBuffer2[i] = v;
-        ++i;
-    }
 #else
     size_t halfSize = size / 2;
     size_t i        = 0;
