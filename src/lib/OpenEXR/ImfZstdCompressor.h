@@ -42,6 +42,7 @@ class ZstdCompressor: public Compressor
     char*	_outBuffer;
     size_t _outBufferCapacity;
     int _cmpLevel;
+    size_t _rowStride;
 };
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
