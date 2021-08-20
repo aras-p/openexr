@@ -14,6 +14,7 @@
 #include "ImfRleCompressor.h"
 #include "ImfZipCompressor.h"
 #include "ImfZstdCompressor.h"
+#include "ImfZfpCompressor.h"
 #include "ImfPizCompressor.h"
 #include "ImfPxr24Compressor.h"
 #include "ImfB44Compressor.h"
@@ -157,6 +158,8 @@ newCompressor (Compression c, size_t maxScanLineSize, const Header &hdr)
                                DwaCompressor::STATIC_HUFFMAN);
 
       case ZSTD_COMPRESSION: return new ZstdCompressor (hdr, maxScanLineSize, 16);
+      case ZFP_COMPRESSION:
+          return new ZfpCompressor (hdr, maxScanLineSize, 16);
     
       default:
 

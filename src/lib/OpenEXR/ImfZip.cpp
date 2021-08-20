@@ -11,8 +11,8 @@
 
 #include <math.h>
 
-//#define USE_LIBDEFLATE_COMPRESS
-//#define USE_LIBDEFLATE_DECOMPRESS
+#define USE_LIBDEFLATE_COMPRESS
+#define USE_LIBDEFLATE_DECOMPRESS
 
 
 #include <zlib.h>
