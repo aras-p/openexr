@@ -119,7 +119,7 @@ ZstdCompressor::ZstdCompressor
     _tmpBuffer(0),
     _outBuffer (0),
     _outBufferCapacity (0),
-    _cmpLevel(ZSTD_defaultCLevel())
+    _cmpLevel(1)
 {
     const auto& dw = hdr.dataWindow ();
     _rowStride         = dw.max.x - dw.min.x + 1; //@TODO: sampling

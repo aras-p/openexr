@@ -39,15 +39,18 @@ class ZfpCompressor: public Compressor
   private:
 
     int		_numScanLines;
-    float* _tmpBuffer;
-    size_t _tmpBufferCapacity;
-    char*	_outBuffer;
-    size_t _outBufferCapacity;
+    float*      _floatBuffer;
+    size_t      _floatBufferCapacity;
+    char*	    _zfpBuffer;
+    size_t      _zfpBufferCapacity;
+    char*           _zstdBuffer;
+    size_t          _zstdBufferCapacity;
     char*       _decompBuffer;
     size_t      _decompBufferCapacity;
     size_t _rowStride;
     zfp_stream  _zfpStream;
     zfp_field   _zfpField;
+    int             _cmpLevel;
 };
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
