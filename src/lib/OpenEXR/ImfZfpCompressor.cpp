@@ -12,6 +12,8 @@
 #include <assert.h>
 #include "zstd/zstd.h"
 
+#define USE_ZSTD_AS_WELL 0
+
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 
@@ -49,6 +51,7 @@ ZfpCompressor::ZfpCompressor (
     _zfpBufferCapacity = zfp_stream_maximum_size (&_zfpStream, &_zfpField);
     _zfpBuffer         = new char[_zfpBufferCapacity];
 
+    #if USE_ZSTD_AS_WELL
     _zstdBufferCapacity = ZSTD_compressBound (_zfpBufferCapacity);
     _zstdBuffer = new char[_zstdBufferCapacity];
     if (hasZstdCompressionLevel (hdr))
@@ -57,6 +60,7 @@ ZfpCompressor::ZfpCompressor (
         if (_cmpLevel > ZSTD_maxCLevel ()) _cmpLevel = ZSTD_maxCLevel ();
         if (_cmpLevel < ZSTD_minCLevel ()) _cmpLevel = ZSTD_minCLevel ();
     }
+    #endif // #if USE_ZSTD_AS_WELL
 
     _decompBufferCapacity = _rowStride * numScanLines;
     _decompBuffer         = new char[_decompBufferCapacity];
@@ -105,10 +109,14 @@ ZfpCompressor::compress (
     size_t zfpSize = zfp_compress (&_zfpStream, &_zfpField);
     stream_close (bs);
 
+    #if USE_ZSTD_AS_WELL
     size_t zstdSize = ZSTD_compress (_zstdBuffer, _zstdBufferCapacity, _zfpBuffer, zfpSize, _cmpLevel);
-
     outPtr = _zstdBuffer;
     return (int)zstdSize;
+    #else
+    outPtr = _zfpBuffer;
+    return (int)zfpSize;
+    #endif
 }
 
 
@@ -126,13 +134,17 @@ ZfpCompressor::uncompress (
         return 0;
     }
 
+    #if USE_ZSTD_AS_WELL
     size_t zfpSize = ZSTD_decompress (_zfpBuffer, _zfpBufferCapacity, inPtr, inSize);
     if (zfpSize == 0) {
         outPtr = _decompBuffer;
         return 0;
     }
-
     bitstream* bs = stream_open (_zfpBuffer, zfpSize);
+    #else
+    bitstream* bs = stream_open ((void*)inPtr, inSize);
+    #endif
+
     zfp_stream_set_bit_stream (&_zfpStream, bs);
     zfp_read_header (&_zfpStream, &_zfpField, ZFP_HEADER_FULL);
     _zfpField.data = _decompBuffer;
