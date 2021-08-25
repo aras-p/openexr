@@ -19,8 +19,8 @@ ZfpCompressor::ZfpCompressor (
     const Header& hdr, size_t maxScanLineSize, size_t numScanLines)
     : Compressor (hdr)
     , _numScanLines (numScanLines)
-    , _floatBuffer (0)
-    , _floatBufferCapacity (0)
+    //, _floatBuffer (0)
+    //, _floatBufferCapacity (0)
     , _decompBuffer (0)
     , _decompBufferCapacity (0)
     , _zfpBuffer (0)
@@ -33,17 +33,16 @@ ZfpCompressor::ZfpCompressor (
     int         width = dw.max.x - dw.min.x + 1; //@TODO: sampling
     _rowStride =
         width * 8; //@TODO: support arbitrary formats not just RGBA Half
-    _floatBufferCapacity =
-        uiMult (size_t (width) * 4, numScanLines); // will expand FP16 to FP32
-    _floatBuffer = new float[_floatBufferCapacity];
+    //_floatBufferCapacity =
+    //    uiMult (size_t (width) * 4, numScanLines); // will expand FP16 to FP32
+    //_floatBuffer = new float[_floatBufferCapacity];
 
     memset (&_zfpStream, 0, sizeof (_zfpStream));
     zfp_stream_set_reversible (&_zfpStream);
     zfp_stream_set_execution (&_zfpStream, zfp_exec_serial);
 
     memset (&_zfpField, 0, sizeof (_zfpField));
-    _zfpField.type = zfp_type_float;
-    _zfpField.data = _floatBuffer;
+    _zfpField.type = zfp_type_half;
     _zfpField.nx   = width * 4; //@TODO: not just 4 channel
     _zfpField.ny   = numScanLines;
 
@@ -67,7 +66,7 @@ ZfpCompressor::~ZfpCompressor ()
 {
     delete[] _zstdBuffer;
     delete[] _zfpBuffer;
-    delete[] _floatBuffer;
+    //delete[] _floatBuffer;
     delete[] _decompBuffer;
 }
 
@@ -92,12 +91,13 @@ ZfpCompressor::compress (
     }
 
     assert ((inSize % 2) == 0);
-    assert (inSize / 2 <= _floatBufferCapacity);
+    //assert (inSize / 2 <= _floatBufferCapacity);
     _zfpField.ny = inSize / 2 / _zfpField.nx;
 
-    const uint16_t* inPtr2 = (const uint16_t*) inPtr;
-    for (int i = 0; i < inSize / 2; ++i)
-        _floatBuffer[i] = imath_half_to_float (inPtr2[i]);
+    //const uint16_t* inPtr2 = (const uint16_t*) inPtr;
+    //for (int i = 0; i < inSize / 2; ++i)
+    //    _floatBuffer[i] = imath_half_to_float (inPtr2[i]);
+    _zfpField.data = (void*)inPtr;
 
     bitstream* bs = stream_open (_zfpBuffer, _zfpBufferCapacity);
     zfp_stream_set_bit_stream (&_zfpStream, bs);
@@ -135,14 +135,15 @@ ZfpCompressor::uncompress (
     bitstream* bs = stream_open (_zfpBuffer, zfpSize);
     zfp_stream_set_bit_stream (&_zfpStream, bs);
     zfp_read_header (&_zfpStream, &_zfpField, ZFP_HEADER_FULL);
+    _zfpField.data = _decompBuffer;
     size_t cmpSize = zfp_decompress (&_zfpStream, &_zfpField);
     stream_close (bs);
     if (cmpSize == 0) return 0;
 
     size_t    nvals   = _zfpField.nx * _zfpField.ny;
-    uint16_t* outPtr2 = (uint16_t*)_decompBuffer;
-    for (int i = 0; i < nvals; ++i)
-        outPtr2[i] = imath_float_to_half (_floatBuffer[i]);
+    //uint16_t* outPtr2 = (uint16_t*)_decompBuffer;
+    //for (int i = 0; i < nvals; ++i)
+    //    outPtr2[i] = imath_float_to_half (_floatBuffer[i]);
     outPtr = _decompBuffer;
     return nvals * 2;
 }
