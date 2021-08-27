@@ -99,6 +99,7 @@ IMF_STD_ATTRIBUTE_IMP (originalDataWindow, OriginalDataWindow, Box2i)
 IMF_STD_ATTRIBUTE_IMP (dwaCompressionLevel, DwaCompressionLevel, float)
 IMF_STD_ATTRIBUTE_IMP (zipCompressionLevel, ZipCompressionLevel, int)
 IMF_STD_ATTRIBUTE_IMP (zstdCompressionLevel, ZstdCompressionLevel, int)
+IMF_STD_ATTRIBUTE_IMP (zfpCompressionMode, ZfpCompressionMode, int)
 IMF_STD_ATTRIBUTE_IMP (idManifest, IDManifest, CompressedIDManifest)
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

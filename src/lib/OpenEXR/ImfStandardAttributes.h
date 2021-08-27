@@ -363,6 +363,8 @@ IMF_STD_ATTRIBUTE_DEF (zipCompressionLevel, ZipCompressionLevel, int)
 
 IMF_STD_ATTRIBUTE_DEF (zstdCompressionLevel, ZstdCompressionLevel, int)
 
+IMF_STD_ATTRIBUTE_DEF (zfpCompressionMode, ZfpCompressionMode, int)
+
 //
 // ID Manifest
 //
